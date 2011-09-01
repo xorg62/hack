@@ -248,7 +248,7 @@ wmfs_loop(void)
           if(W->fifo.fd)
                FD_SET(W->fifo.fd, &iset);
 
-          if(select(fd + maxfd + 1, &iset, NULL, NULL, NULL) > 0)
+          if(select(maxfd, &iset, NULL, NULL, NULL) > 0)
           {
                if(FD_ISSET(fd, &iset))
                {
@@ -307,11 +307,9 @@ wmfs_quit(void)
      }
 
      /* FIFO stuffs */
-     if(W->fifo.fd)
-     {
-          close(W->fifo.fd);
-          free(W->fifo.path);
-     }
+     close(W->fifo.fd);
+     unlink(W->fifo.path);
+     free(W->fifo.path);
 
      W->running = false;
 

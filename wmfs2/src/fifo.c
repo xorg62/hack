@@ -8,18 +8,15 @@
 #include "fifo.h"
 #include "config.h"
 
-#define FIFO_DEFAULT_PATH     "/tmp/wmfs-fifo"
-
 void
 fifo_init(void)
 {
-     W->fifo.path = xstrdup (FIFO_DEFAULT_PATH);
+     xasprintf(&(W->fifo.path), "%s/wmfs-fifo.%d", P_tmpdir, getpid());
 
      if(mkfifo(W->fifo.path, 0644) < 0
                || !(W->fifo.fd = open(W->fifo.path, O_NONBLOCK, 0)))
      {
           warnx("Can't create FIFO: %s\n", strerror(errno));
-          free(W->fifo.path);
           return;
      }
 }
