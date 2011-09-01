@@ -233,10 +233,35 @@ static void
 wmfs_loop(void)
 {
      XEvent ev;
+     int fd = ConnectionNumber(W->dpy);
+     int maxfd = fd + 1;
+     fd_set iset;
 
-     while(XPending(W->dpy))
-          while(W->running && !XNextEvent(W->dpy, &ev))
-               HANDLE_EVENT(&ev);
+     if(W->fifo.fd)
+          maxfd += W->fifo.fd;
+
+     while(W->running)
+     {
+          FD_ZERO(&iset);
+          FD_SET(fd, &iset);
+
+          if(W->fifo.fd)
+               FD_SET(W->fifo.fd, &iset);
+
+          if(select(fd + maxfd + 1, &iset, NULL, NULL, NULL) > 0)
+          {
+               if(FD_ISSET(fd, &iset))
+               {
+                    while(XPending(W->dpy))
+                    {
+                         XNextEvent(W->dpy, &ev);
+                         HANDLE_EVENT(&ev);
+                    }
+               }
+               else if(W->fifo.fd && FD_ISSET(W->fifo.fd, &iset))
+                    fifo_read();
+          }
+     }
 }
 
 static inline void
@@ -281,10 +306,17 @@ wmfs_quit(void)
           free(t);
      }
 
-     free(W->net_atom);
-     free(W);
+     /* FIFO stuffs */
+     if(W->fifo.fd)
+     {
+          close(W->fifo.fd);
+          free(W->fifo.path);
+     }
 
      W->running = false;
+
+     free(W->net_atom);
+     free(W);
 }
 
 /** Reload WMFS binary
